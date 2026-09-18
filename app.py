@@ -97,3 +97,87 @@ if st.sidebar.button("احسب التوصية", type="primary"):
 
 else:
     st.info("👈 اختر الولاية والتاريخ، ثم اضغط 'احسب التوصية'")
+    # ============================================
+# المحاكاة ثلاثية الأبعاد للحقل
+# ============================================
+
+import plotly.graph_objects as go
+
+st.markdown("---")
+st.markdown("## 🗺️ محاكاة الحقل ثلاثي الأبعاد")
+
+# إعدادات الحقل
+grid_size = 10  # حقل 10×10
+np.random.seed(42)
+
+# محاكاة حالة كل خلية (رطوبة التربة)
+# في الواقع، هذه البيانات تأتي من الأقمار الصناعية (NDVI)
+soil_moisture = np.random.uniform(0.2, 0.9, (grid_size, grid_size))
+
+# تصنيف الحالة
+def classify_cell(moisture):
+    if moisture < 0.3:
+        return "جاف (يحتاج ري)"
+    elif moisture < 0.6:
+        return "متوسط"
+    else:
+        return "رطب (جيد)"
+
+# إنشاء خريطة الحقل
+fig = go.Figure(data=[
+    go.Surface(
+        z=soil_moisture,
+        colorscale=[
+            [0.0, 'red'],      # جاف
+            [0.5, 'yellow'],   # متوسط
+            [1.0, 'green']     # رطب
+        ],
+        colorbar=dict(title="رطوبة التربة"),
+        hovertemplate="الموقع: (%{x}, %{y})<br>الرطوبة: %{z:.2f}<extra></extra>"
+    )
+])
+
+fig.update_layout(
+    title="🗺️ خريطة رطوبة التربة في الحقل",
+    scene=dict(
+        xaxis_title="الموقع X",
+        yaxis=dict(title="الموقع Y"),
+        zaxis=dict(title="رطوبة التربة"),
+        camera=dict(eye=dict(x=1.5, y=1.5, z=1.2))
+    ),
+    height=600
+)
+
+st.plotly_chart(fig, use_container_width=True)
+
+# ============================================
+# تحليل الحقل
+# ============================================
+
+st.markdown("### 📊 تحليل الحقل")
+
+col1, col2, col3 = st.columns(3)
+
+dry_cells = np.sum(soil_moisture < 0.3)
+medium_cells = np.sum((soil_moisture >= 0.3) & (soil_moisture < 0.6))
+wet_cells = np.sum(soil_moisture >= 0.6)
+
+with col1:
+    st.metric("🔴 خلايا جافة", f"{dry_cells} / {grid_size*grid_size}")
+
+with col2:
+    st.metric("🟡 خلايا متوسطة", f"{medium_cells} / {grid_size*grid_size}")
+
+with col3:
+    st.metric("🟢 خلايا رطبة", f"{wet_cells} / {grid_size*grid_size}")
+
+# ============================================
+# التوصية العامة
+# ============================================
+
+if dry_cells > grid_size * grid_size * 0.3:
+    st.error("🚨 أكثر من 30% من الحقل جاف! يُنصح بالري الفوري.")
+elif dry_cells > grid_size * grid_size * 0.15:
+    st.warning("⚠️ بعض المناطق جافة. راقب الحقل عن قرب.")
+else:
+    st.success("✅ الحقل في حالة جيدة. لا حاجة للري الآن.")
